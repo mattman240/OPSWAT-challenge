@@ -3,10 +3,15 @@ const http = require('https');
 const md5Hash = require('md5');
 const fs = require('fs');
 const request = require('request');
+const path = require('path');
 
-const hashFile = file => md5Hash(file);
+const hashFile = (file) => {
+  const fileHash = md5Hash(file);
+  return fileHash.toUpperCase();
+};
 
 const formatData = (res) => {
+  console.log('i am res', res);
   const output = [
     `filename: ${res.file_info.display_name}`,
     `overall_status: ${res.scan_results.scan_all_result_a}`,
@@ -15,7 +20,7 @@ const formatData = (res) => {
     const value = res.scan_results.scan_details[key];
     const data = [
       `engine: ${key}`,
-      `threat_found: ${value.threat_found}`,
+      `thread_found: ${value.threat_found}`,
       `scan_result: ${value.scan_result_i}`,
       `def_time: ${value.def_time}`,
     ];
@@ -28,19 +33,18 @@ const formatData = (res) => {
 
 
 const addFile = (filePath) => {
-  const data = {
-    file: fs.createReadStream(filePath),
+  const formData = {
+    file: fs.createReadStream(path.join(__dirname, filePath)),
   };
   const headers = {
     url: 'https://api.metadefender.com/v2/file',
-    data,
+    formData,
     headers: { apikey: API_KEY },
   };
-
   request.post(headers, (err, response, body) => {
     if (err) return console.error('failed to upload, with code', err);
     if (body === '') {
-      return console.log('File upload didn\'t work please try again and check the file');
+      return console.log('there is no response from server');
     }
     const parameters = {
       method: 'GET',
@@ -61,7 +65,7 @@ const addFile = (filePath) => {
   });
 };
 
-const apiRequest = (hashCode) => {
+const apiRequest = (hashCode, filePath) => {
   const parameters = {
     method: 'GET',
     hostname: 'api.metadefender.com',
@@ -74,9 +78,10 @@ const apiRequest = (hashCode) => {
     res.on('data', chunkedData => rawData.push(chunkedData));
     res.on('end', () => {
       const result = JSON.parse(Buffer.concat(rawData).toString());
-      if (!result.scan_results) {
+      // console.log(result)
+      if (Object.keys(result).length === 1) {
         console.log('uploading file');
-        addFile();
+        addFile(filePath);
       } else {
         formatData(result);
       }
@@ -84,3 +89,9 @@ const apiRequest = (hashCode) => {
   });
   getRequest.end();
 };
+
+// example post request
+// apiRequest(hashFile('samplefile.txt'), 'samplefile.txt');
+
+// example get request
+// apiRequest('6A5C19D9FFE8804586E8F4C0DFCC66DE');
