@@ -13,3 +13,4 @@ Coding challenge for OPSWAT
 
 ###To scan a file for the first time
   -addFile('actual file path')
+  
